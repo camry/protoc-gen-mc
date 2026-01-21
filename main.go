@@ -5,7 +5,7 @@ import (
 
     "google.golang.org/protobuf/compiler/protogen"
 
-    "protoc-gen-mongo/internal/gengo"
+    "protoc-gen-mc/internal/gengo"
 )
 
 func main() {

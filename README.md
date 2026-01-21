@@ -1,6 +1,6 @@
-# protoc-gen-mongo
+# protoc-gen-mc
 
-protoc-gen-mongo 是一个 Go 语言的 Protocol Buffers 插件，用于为生成的 PB 对象添加 MongoDB 操作方法。
+protoc-gen-mc 是一个 Go 语言的 Protocol Buffers 插件，用于为生成的 PB 对象添加 MongoDB 操作方法。
 
 ## 功能
 
@@ -15,7 +15,7 @@ protoc-gen-mongo 是一个 Go 语言的 Protocol Buffers 插件，用于为生�
 ## 安装
 
 ```bash
-go build -o protoc-gen-mongo.exe .
+go build -o protoc-gen-mc.exe .
 ```
 
 确保生成的可执行文件在你的 PATH 环境变量中。
@@ -44,16 +44,19 @@ message User {
 插件将生成以下方法：
 
 ### Set 方法
+
 - `Set()` - 生成完整的更新对象
 - `SetName(v string) bson.M` - 设置单个字段
 - `SetAge(v int32) bson.M` - 设置数字字段
 - `SetAddress(v *Address) bson.M` - 设置嵌套消息
 
 ### 数字字段方法
+
 - `IncrAge(v int32) bson.M` - 增加数值
 - `DecrAge(v int32) bson.M` - 减少数值
 
 ### Map 字段方法
+
 - `SetTags(v map[int32]string) bson.M` - 替换整个 map
 - `InsertTags(k int32, v string) bson.M` - 向 map 插入键值对
 - `DeleteTags(k int32) bson.M` - 从 map 删除键

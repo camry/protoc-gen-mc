@@ -1,4 +1,4 @@
-module protoc-gen-mongo
+module protoc-gen-mc
 
 go 1.25.4
 
