@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "./;pb";
+
+message A {
+    int64 _id = 1;
+    string aUsername = 2;
+    repeated int32 ids = 3;
+    B b = 4;
+    string a_nickname_alias = 5;
+    int32 a_count = 6;
+}
+
+message B {
+    string bUsername = 1;
+    C c = 2;
+}
+
+message C {
+    string cUsername = 1;
+    D d = 2;
+    repeated D d_list = 3;
+    map<string, int32> tag_map = 4;
+    map<string, D> d_map = 5;
+}
+
+message D {
+    int32 id = 1;
+    int64 uid = 2;
+    string dUsername = 3;
+    bool isBool = 4;
+    float fltV32 = 5;
+    double fltV64 = 6;
+    repeated string tags = 7;
+}
