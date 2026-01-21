@@ -5,33 +5,33 @@ package pb;
 option go_package = "./;pb";
 
 message A {
-    int64 _id = 1;
-    string aUsername = 2;
-    repeated int32 ids = 3;
-    B b = 4;
-    string a_nickname_alias = 5;
-    int32 a_count = 6;
+    int64 _id = 1; // Mongo 唯一ID
+    string aUsername = 2; // A用户名
+    repeated int32 ids = 3; // ID列表
+    B b = 4; // B对象
+    string a_nickname_alias = 5; // A昵称别名
+    int32 a_count = 6; // A统计
 }
 
 message B {
-    string bUsername = 1;
-    C c = 2;
+    string bUsername = 1; // B用户名
+    C c = 2; // C对象
 }
 
 message C {
-    string cUsername = 1;
-    D d = 2;
-    repeated D d_list = 3;
-    map<string, int32> tag_map = 4;
-    map<string, D> d_map = 5;
+    string cUsername = 1; // C用户名
+    D d = 2; // D对象
+    repeated D d_list = 3; // D列表
+    map<string, int32> tag_map = 4; // 标签字典
+    map<string, D> d_map = 5; // D字典
 }
 
 message D {
-    int32 id = 1;
-    int64 uid = 2;
-    string dUsername = 3;
-    bool isBool = 4;
-    float fltV32 = 5;
-    double fltV64 = 6;
-    repeated string tags = 7;
+    int32 id = 1; // ID
+    int64 uid = 2; // UID
+    string dUsername = 3; // D用户名
+    bool isBool = 4; // 布尔
+    float fltV32 = 5; // 浮点数32
+    double fltV64 = 6; // 浮点数64
+    repeated string tags = 7; // 标签列表
 }

@@ -63,7 +63,13 @@ func generateMessageStruct(g *protogen.GeneratedFile, message *protogen.Message)
     for _, field := range message.Fields {
         fieldName := getPrivateFieldName(field)
         fieldType := getFieldType(field)
-        g.P("\t", fieldName, " ", fieldType)
+        // 添加 proto 定义的注释
+        leadingComments := field.Comments.Trailing
+        if leadingComments != "" {
+            g.P("\t", fieldName, " ", fieldType, " ", trailingComment(leadingComments))
+        } else {
+            g.P("\t", fieldName, " ", fieldType)
+        }
     }
     g.P("}")
     g.P()
