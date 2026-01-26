@@ -28,10 +28,11 @@ message C {
 
 message D {
     int32 id = 1; // ID
-    int64 uid = 2; // UID
-    string dUsername = 3; // D用户名
-    bool isBool = 4; // 布尔
-    float fltV32 = 5; // 浮点数32
-    double fltV64 = 6; // 浮点数64
-    repeated string tags = 7; // 标签列表
+    uint32 iid = 2; // IID
+    int64 uid = 3; // UID
+    string dUsername = 4; // D用户名
+    bool isBool = 5; // 布尔
+    float fltV32 = 6; // 浮点数32
+    double fltV64 = 7; // 浮点数64
+    repeated string tags = 8; // 标签列表
 }

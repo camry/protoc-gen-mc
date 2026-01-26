@@ -308,7 +308,7 @@ func generateDecoderRegistration(g *protogen.GeneratedFile, message *protogen.Me
                 g.P("\t\tv.", privateFieldName, " = mc.NewListBase[uint32](v, \"", privateFieldName, "\")")
                 g.P("\t\terr = v.", privateFieldName, ".Decode(vr, v.", privateFieldName, ")")
             } else {
-                g.P("\t\tv.", privateFieldName, ", err = mc.Uint32Decode(vr)")
+                g.P("\t\tv.", privateFieldName, ", err = mc.UInt32Decode(vr)")
             }
         case protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Sfixed64Kind:
             if field.Desc.IsList() {
@@ -322,7 +322,7 @@ func generateDecoderRegistration(g *protogen.GeneratedFile, message *protogen.Me
                 g.P("\t\tv.", privateFieldName, " = mc.NewListBase[uint64](v, \"", privateFieldName, "\")")
                 g.P("\t\terr = v.", privateFieldName, ".Decode(vr, v.", privateFieldName, ")")
             } else {
-                g.P("\t\tv.", privateFieldName, ", err = mc.Uint64Decode(vr)")
+                g.P("\t\tv.", privateFieldName, ", err = mc.UInt64Decode(vr)")
             }
         case protoreflect.BoolKind:
             if field.Desc.IsList() {
