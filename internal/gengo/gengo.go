@@ -345,6 +345,8 @@ func generateDecoderRegistration(g *protogen.GeneratedFile, message *protogen.Me
             } else {
                 g.P("\t\tv.", privateFieldName, ", err = mc.Float64Decode(vr)")
             }
+        case protoreflect.BytesKind:
+            g.P("\t\tv.", privateFieldName, ", err = mc.BinaryDecode(vr)")
         default:
             g.P("\t\t// Unsupported type for field ", privateFieldName)
         }
@@ -417,7 +419,7 @@ func generateMarshalMethod(g *protogen.GeneratedFile, message *protogen.Message)
         } else {
             // 根据字段类型决定如何序列化
             // repeated、map 和 message 类型都需要调用 Marshal 方法
-            if field.Desc.IsList() || field.Desc.IsMap() || field.Desc.Kind() == protoreflect.MessageKind {
+            if (field.Desc.IsList() && field.Desc.Kind() != protoreflect.BytesKind) || field.Desc.IsMap() || field.Desc.Kind() == protoreflect.MessageKind {
                 // repeated、map 和 message 类型有 Marshal 方法
                 g.P("\tm[\"", privateFieldName, "\"] = ", ReceiverVar, ".Get", publicFieldName, "().Marshal()")
             } else {
@@ -513,7 +515,7 @@ func generateGetterMethod(g *protogen.GeneratedFile, messageName, publicFieldNam
             g.P("\t\t", ReceiverVar, ".", privateFieldName, " = mc.NewMapBase[", getGoType(mapK.Desc), ", ", getGoType(mapV.Desc), "](", ReceiverVar, ", \"", privateFieldName, "\")")
         }
         g.P("\t}")
-    } else if field.Desc.IsList() {
+    } else if field.Desc.IsList() && field.Desc.Kind() != protoreflect.BytesKind {
         // 对于 Repeated 类型字段，添加 nil 检查
         g.P("\tif ", ReceiverVar, ".", privateFieldName, " == nil {")
         if field.Desc.Kind() == protoreflect.MessageKind {
