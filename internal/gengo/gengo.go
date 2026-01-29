@@ -559,7 +559,7 @@ func generateSetterMethod(g *protogen.GeneratedFile, messageName, publicFieldNam
 
     g.P("func (", ReceiverVar, " *", messageName, ") Set", publicFieldName, "(value ", paramType, ") {")
     g.P("\t", ReceiverVar, ".", privateFieldName, " = value")
-    g.P("\t", ReceiverVar, ".Set(", ReceiverVar, ", \"", privateFieldName, "\", value)")
+    g.P("\t", ReceiverVar, ".Set(\"", privateFieldName, "\", value)")
     g.P("}")
 }
 
@@ -567,7 +567,7 @@ func generateSetterMethod(g *protogen.GeneratedFile, messageName, publicFieldNam
 func generateUnsetMethod(g *protogen.GeneratedFile, messageName, publicFieldName, privateFieldName string, field *protogen.Field) {
     g.P("func (", ReceiverVar, " *", messageName, ") Unset", publicFieldName, "() {")
     g.P("\t", ReceiverVar, ".", privateFieldName, " = nil")
-    g.P("\t", ReceiverVar, ".Unset(", ReceiverVar, ", \"", privateFieldName, "\")")
+    g.P("\t", ReceiverVar, ".Unset(\"", privateFieldName, "\")")
     g.P("}")
 }
 
@@ -578,14 +578,14 @@ func generateNumericMethods(g *protogen.GeneratedFile, messageName, publicFieldN
     // 生成 Incr 方法
     g.P("func (", ReceiverVar, " *", messageName, ") Incr", publicFieldName, "(value ", fieldType, ") ", fieldType, " {")
     g.P("\t", ReceiverVar, ".", privateFieldName, " += value")
-    g.P("\t", ReceiverVar, ".Set(", ReceiverVar, ", \"", privateFieldName, "\", ", ReceiverVar, ".", privateFieldName, ")")
+    g.P("\t", ReceiverVar, ".Set(\"", privateFieldName, "\", ", ReceiverVar, ".", privateFieldName, ")")
     g.P("\treturn ", ReceiverVar, ".", privateFieldName)
     g.P("}")
 
     // 生成 Decr 方法
     g.P("func (", ReceiverVar, " *", messageName, ") Decr", publicFieldName, "(value ", fieldType, ") ", fieldType, " {")
     g.P("\t", ReceiverVar, ".", privateFieldName, " -= value")
-    g.P("\t", ReceiverVar, ".Set(", ReceiverVar, ", \"", privateFieldName, "\", ", ReceiverVar, ".", privateFieldName, ")")
+    g.P("\t", ReceiverVar, ".Set(\"", privateFieldName, "\", ", ReceiverVar, ".", privateFieldName, ")")
     g.P("\treturn ", ReceiverVar, ".", privateFieldName)
     g.P("}")
 }
