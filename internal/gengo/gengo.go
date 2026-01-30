@@ -331,9 +331,7 @@ func getGoType(desc protoreflect.FieldDescriptor) string {
         return "string"
     case protoreflect.BytesKind:
         return "[]byte"
-    case protoreflect.MessageKind:
-        return "*" + getFullMessageNameByFieldDescriptor(desc)
-    case protoreflect.GroupKind:
+    case protoreflect.MessageKind, protoreflect.GroupKind:
         return "*" + getFullMessageNameByFieldDescriptor(desc)
     default:
         return "any"
