@@ -172,54 +172,65 @@ func getPublicFieldName(field *protogen.Field) string {
     return lo.PascalCase(name)
 }
 
-// getFullMessageName 获取消息的完整名称，包括嵌套结构
-func getFullMessageName(message *protogen.Message) string {
-    // 获取消息的完整限定名
-    fullName := string(message.Desc.FullName())
-    // 提取文件包名
-    packageName := string(message.Desc.ParentFile().Package())
-
-    // 如果消息在同一个包内，移除包名前缀
-    if packageName != "" && strings.HasPrefix(fullName, packageName+".") {
-        // 移除包名前缀后，保留嵌套结构
-        result := strings.Replace(fullName, packageName+".", "", 1)
-        // 将剩余的 . 分隔符替换为 _
-        return strings.Replace(result, ".", "_", -1)
+// getPrivateFieldNameFromPublic 从公共字段名获取私有字段名
+func getPrivateFieldNameFromPublic(publicFieldName string) string {
+    if len(publicFieldName) > 0 {
+        return strings.ToLower(string(publicFieldName[0])) + publicFieldName[1:]
     }
-    // 如果没有包名或者不是以包名开头，直接替换分隔符
-    return strings.Replace(fullName, ".", "_", -1)
+    return publicFieldName
 }
 
 // getDecoderVariableName 获取解码器变量名，保持嵌套消息名称的下划线格式
 func getDecoderVariableName(messageName string) string {
     // 将名称转换为小写开头的格式，保留下划线
     // 如 A_B_C_D -> a_B_C_D
-    if len(messageName) == 0 {
-        return messageName
+    if len(messageName) > 0 {
+        return strings.ToLower(string(messageName[0])) + messageName[1:] + "Decode"
     }
-    // 将首字母转为小写
-    firstChar := string(messageName[0])
-    lowerFirstChar := strings.ToLower(firstChar)
-    return lowerFirstChar + messageName[1:] + "Decode"
+    return messageName
 }
 
-// getFullFieldName 获取字段的完整名称，包括嵌套结构
-func getFullFieldName(desc protoreflect.FieldDescriptor) string {
-    // 对于消息类型，我们使用完整名称并替换嵌套分隔符
+// isNumericField 检查字段是否为数值类型
+func isNumericField(field *protogen.Field) bool {
+    switch field.Desc.Kind() {
+    case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Sfixed32Kind,
+        protoreflect.Uint32Kind, protoreflect.Fixed32Kind,
+        protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Sfixed64Kind,
+        protoreflect.Uint64Kind, protoreflect.Fixed64Kind,
+        protoreflect.FloatKind, protoreflect.DoubleKind:
+        return true
+    default:
+        return false
+    }
+}
+
+// getFullMessageName 获取消息的完整名称，包括嵌套结构
+func getFullMessageName(message *protogen.Message) string {
+    fullName := string(message.Desc.FullName())
+    packageName := string(message.Desc.ParentFile().Package())
+    return getFullMessageNameFilterPackage(fullName, packageName)
+}
+
+// getFullMessageNameByFieldDescriptor 获取字段的消息的完整名称，包括嵌套结构
+func getFullMessageNameByFieldDescriptor(desc protoreflect.FieldDescriptor) string {
     fullName := string(desc.Message().FullName())
-    // 获取包名并移除
-    packageFullName := string(desc.ParentFile().Package())
+    packageName := string(desc.ParentFile().Package())
+    return getFullMessageNameFilterPackage(fullName, packageName)
+}
+
+// getFullMessageNameFilterPackage 获取消息的完整名称，过滤掉包名
+func getFullMessageNameFilterPackage(fullName string, packageName string) string {
     var msgName string
-    if packageFullName != "" && strings.HasPrefix(fullName, packageFullName+".") {
+    // 如果消息在同一个包内，移除包名前缀
+    if packageName != "" && strings.HasPrefix(fullName, packageName+".") {
         // 移除包名前缀，保留嵌套结构
-        msgName = strings.Replace(fullName, packageFullName+".", "", 1)
+        msgName = strings.Replace(fullName, packageName+".", "", 1)
     } else {
         // 使用完整名称
         msgName = fullName
     }
     // 将嵌套分隔符替换为下划线
-    msgName = strings.Replace(msgName, ".", "_", -1)
-    return msgName
+    return strings.Replace(msgName, ".", "_", -1)
 }
 
 // getFieldType 获取字段的 Go 类型
@@ -321,9 +332,9 @@ func getGoType(desc protoreflect.FieldDescriptor) string {
     case protoreflect.BytesKind:
         return "[]byte"
     case protoreflect.MessageKind:
-        return "*" + getFullFieldName(desc)
+        return "*" + getFullMessageNameByFieldDescriptor(desc)
     case protoreflect.GroupKind:
-        return "*" + getFullFieldName(desc)
+        return "*" + getFullMessageNameByFieldDescriptor(desc)
     default:
         return "any"
     }
@@ -519,28 +530,6 @@ func generateMarshalMethod(g *protogen.GeneratedFile, message *protogen.Message)
     }
     g.P("\treturn m")
     g.P("}")
-}
-
-// getPrivateFieldNameFromPublic 从公共字段名获取私有字段名
-func getPrivateFieldNameFromPublic(publicFieldName string) string {
-    if len(publicFieldName) > 0 {
-        return strings.ToLower(string(publicFieldName[0])) + publicFieldName[1:]
-    }
-    return publicFieldName
-}
-
-// isNumericField 检查字段是否为数值类型
-func isNumericField(field *protogen.Field) bool {
-    switch field.Desc.Kind() {
-    case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Sfixed32Kind,
-        protoreflect.Uint32Kind, protoreflect.Fixed32Kind,
-        protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Sfixed64Kind,
-        protoreflect.Uint64Kind, protoreflect.Fixed64Kind,
-        protoreflect.FloatKind, protoreflect.DoubleKind:
-        return true
-    default:
-        return false
-    }
 }
 
 // generateFieldMethods 生成字段的 getter 和 setter 方法
