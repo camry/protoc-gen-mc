@@ -84,9 +84,9 @@ func generateMessageStruct(g *protogen.GeneratedFile, message *protogen.Message)
         fieldName := getPrivateFieldName(field)
         fieldType := getFieldType(field)
         // 添加 proto 定义的注释
-        leadingComments := field.Comments.Trailing
-        if leadingComments != "" {
-            g.P("\t", fieldName, " ", fieldType, " ", trailingComment(leadingComments))
+        trailingComments := field.Comments.Trailing
+        if trailingComments != "" {
+            g.P("\t", fieldName, " ", fieldType, " ", trailingComment(trailingComments))
         } else {
             g.P("\t", fieldName, " ", fieldType)
         }
