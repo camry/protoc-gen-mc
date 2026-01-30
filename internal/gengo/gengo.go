@@ -544,11 +544,11 @@ func generateFieldMethods(g *protogen.GeneratedFile, message *protogen.Message, 
             g.P() // 添加空行
             generateGetterMethod(g, messageName, publicFieldName, privateFieldName, field)
         } else {
-            // 为其他字段生成 Getter 和 Setter 方法
+            // 为其他字段生成 Getter 和 Set 方法
             g.P() // 添加空行
             generateGetterMethod(g, messageName, publicFieldName, privateFieldName, field)
             g.P() // 添加空行
-            generateSetterMethod(g, messageName, publicFieldName, privateFieldName, field)
+            generateSetMethod(g, messageName, publicFieldName, privateFieldName, field)
 
             // 为数值类型字段生成 Incr 和 Decr 方法
             if isNumericField(field) {
@@ -612,8 +612,8 @@ func generateGetterMethod(g *protogen.GeneratedFile, messageName, publicFieldNam
     g.P("}")
 }
 
-// generateSetterMethod 生成 Setter 方法
-func generateSetterMethod(g *protogen.GeneratedFile, messageName, publicFieldName, privateFieldName string, field *protogen.Field) {
+// generateSetMethod 生成 Set 方法
+func generateSetMethod(g *protogen.GeneratedFile, messageName, publicFieldName, privateFieldName string, field *protogen.Field) {
     paramType := getFieldType(field)
 
     g.P("func (", ReceiverVar, " *", messageName, ") Set", publicFieldName, "(value ", paramType, ") {")
