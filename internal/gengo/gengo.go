@@ -49,16 +49,28 @@ func GenerateFile(gen *protogen.Plugin, file *protogen.File) {
     g.P(")")
     g.P()
 
-    // 生成所有消息类型的代码
+    // 生成所有消息类型的代码（包括嵌套消息）
     for _, message := range file.Messages {
-        generateMessageStruct(g, message)
-        g.P()
+        generateMessageStructRecursive(g, message)
+    }
+}
+
+// generateMessageStructRecursive 递归生成消息结构体及其相关方法
+func generateMessageStructRecursive(g *protogen.GeneratedFile, message *protogen.Message) {
+    if message.Desc.IsMapEntry() {
+        return
+    }
+    // 生成当前消息结构体
+    generateMessageStruct(g, message)
+    // 递归生成嵌套消息结构体
+    for _, nestedMessage := range message.Messages {
+        generateMessageStructRecursive(g, nestedMessage)
     }
 }
 
 // generateMessageStruct 生成消息结构体及其相关方法
 func generateMessageStruct(g *protogen.GeneratedFile, message *protogen.Message) {
-    messageName := string(message.Desc.Name()) // 确保转换为 string
+    messageName := getFullMessageName(message)
 
     // 确定是否是顶级消息（包含 key 字段的消息）
     isTopLevel := isTopLevelMessage(message)
@@ -160,6 +172,56 @@ func getPublicFieldName(field *protogen.Field) string {
     return lo.PascalCase(name)
 }
 
+// getFullMessageName 获取消息的完整名称，包括嵌套结构
+func getFullMessageName(message *protogen.Message) string {
+    // 获取消息的完整限定名
+    fullName := string(message.Desc.FullName())
+    // 提取文件包名
+    packageName := string(message.Desc.ParentFile().Package())
+
+    // 如果消息在同一个包内，移除包名前缀
+    if packageName != "" && strings.HasPrefix(fullName, packageName+".") {
+        // 移除包名前缀后，保留嵌套结构
+        result := strings.Replace(fullName, packageName+".", "", 1)
+        // 将剩余的 . 分隔符替换为 _
+        return strings.Replace(result, ".", "_", -1)
+    }
+    // 如果没有包名或者不是以包名开头，直接替换分隔符
+    return strings.Replace(fullName, ".", "_", -1)
+}
+
+// getDecoderVariableName 获取解码器变量名，保持嵌套消息名称的下划线格式
+func getDecoderVariableName(messageName string) string {
+    // 将名称转换为小写开头的格式，保留下划线
+    // 如 A_B_C_D -> a_B_C_D
+    if len(messageName) == 0 {
+        return messageName
+    }
+    // 将首字母转为小写
+    firstChar := string(messageName[0])
+    lowerFirstChar := strings.ToLower(firstChar)
+    return lowerFirstChar + messageName[1:] + "Decode"
+}
+
+// getFullFieldName 获取字段的完整名称，包括嵌套结构
+func getFullFieldName(desc protoreflect.FieldDescriptor) string {
+    // 对于消息类型，我们使用完整名称并替换嵌套分隔符
+    fullName := string(desc.Message().FullName())
+    // 获取包名并移除
+    packageFullName := string(desc.ParentFile().Package())
+    var msgName string
+    if packageFullName != "" && strings.HasPrefix(fullName, packageFullName+".") {
+        // 移除包名前缀，保留嵌套结构
+        msgName = strings.Replace(fullName, packageFullName+".", "", 1)
+    } else {
+        // 使用完整名称
+        msgName = fullName
+    }
+    // 将嵌套分隔符替换为下划线
+    msgName = strings.Replace(msgName, ".", "_", -1)
+    return msgName
+}
+
 // getFieldType 获取字段的 Go 类型
 func getFieldType(field *protogen.Field) string {
     switch field.Desc.Kind() {
@@ -172,21 +234,24 @@ func getFieldType(field *protogen.Field) string {
             valueType := getGoType(mapV.Desc)
             if mapV.Desc.Kind() == protoreflect.MessageKind {
                 // 如果 map 的值是消息类型，则使用指针
-                return fmt.Sprintf("*mc.MapMessage[%s, *%s]", keyType, mapV.Message.Desc.Name())
+                nestedMessageName := getFullMessageName(mapV.Message)
+                return fmt.Sprintf("*mc.MapMessage[%s, *%s]", keyType, nestedMessageName)
             }
             return fmt.Sprintf("*mc.MapBase[%s, %s]", keyType, valueType)
         } else if field.Desc.IsList() {
             // 处理 repeated 类型
             if field.Desc.Kind() == protoreflect.MessageKind {
                 // 如果 repeated 的元素是消息类型，使用 ListMessage
-                return fmt.Sprintf("*mc.ListMessage[*%s]", field.Message.Desc.Name())
+                nestedMessageName := getFullMessageName(field.Message)
+                return fmt.Sprintf("*mc.ListMessage[*%s]", nestedMessageName)
             }
             // 如果 repeated 的元素是基本类型，使用 ListBase
             elementType := getGoType(field.Desc)
             return fmt.Sprintf("*mc.ListBase[%s]", elementType)
         }
         // 普通消息类型
-        return "*" + string(field.Message.Desc.Name())
+        nestedMessageName := getFullMessageName(field.Message)
+        return "*" + nestedMessageName
     case protoreflect.StringKind:
         if field.Desc.IsList() {
             return "*mc.ListBase[string]"
@@ -256,9 +321,9 @@ func getGoType(desc protoreflect.FieldDescriptor) string {
     case protoreflect.BytesKind:
         return "[]byte"
     case protoreflect.MessageKind:
-        return "*" + string(desc.Message().Name())
+        return "*" + getFullFieldName(desc)
     case protoreflect.GroupKind:
-        return "*" + string(desc.Message().Name())
+        return "*" + getFullFieldName(desc)
     default:
         return "any"
     }
@@ -266,9 +331,11 @@ func getGoType(desc protoreflect.FieldDescriptor) string {
 
 // generateDecoderRegistration 生成解码注册代码
 func generateDecoderRegistration(g *protogen.GeneratedFile, message *protogen.Message) {
-    messageName := string(message.Desc.Name()) // 转换为 string
+    messageName := getFullMessageName(message)
 
-    g.P("var ", lo.CamelCase(messageName), "Decode = mc.Register(&", messageName, "{},")
+    // 对于嵌套消息名称，我们直接在名称后添加 Decode，而不使用 CamelCase
+    decoderVarName := getDecoderVariableName(messageName)
+    g.P("var ", decoderVarName, " = mc.Register(&", messageName, "{},")
 
     for _, field := range message.Fields {
         privateFieldName := getPrivateFieldName(field)
@@ -284,7 +351,8 @@ func generateDecoderRegistration(g *protogen.GeneratedFile, message *protogen.Me
                 valueIsMessage := mapParams[1].Desc.Kind() == protoreflect.MessageKind
 
                 if valueIsMessage {
-                    g.P("\t\tv.", privateFieldName, " = mc.NewMapMessage[", getGoType(mapParams[0].Desc), ", *", mapParams[1].Message.Desc.Name(), "](v, \"", privateFieldName, "\", new", mapParams[1].Message.Desc.Name(), ")")
+                    nestedMessageName := getFullMessageName(mapParams[1].Message)
+                    g.P("\t\tv.", privateFieldName, " = mc.NewMapMessage[", getGoType(mapParams[0].Desc), ", *", nestedMessageName, "](v, \"", privateFieldName, "\", new", nestedMessageName, ")")
                     g.P("\t\terr = v.", privateFieldName, ".Decode(vr, v.", privateFieldName, ")")
                 } else {
                     g.P("\t\tv.", privateFieldName, " = mc.NewMapBase[", getGoType(mapParams[0].Desc), ", ", getGoType(mapParams[1].Desc), "](v, \"", privateFieldName, "\")")
@@ -294,7 +362,8 @@ func generateDecoderRegistration(g *protogen.GeneratedFile, message *protogen.Me
                 // Repeated 类型
                 if field.Desc.Kind() == protoreflect.MessageKind {
                     // 如果 repeated 的元素是消息类型，使用 NewListMessage
-                    g.P("\t\tv.", privateFieldName, " = mc.NewListMessage[*", field.Message.Desc.Name(), "](v, \"", privateFieldName, "\", new", field.Message.Desc.Name(), ")")
+                    nestedMessageName := getFullMessageName(field.Message)
+                    g.P("\t\tv.", privateFieldName, " = mc.NewListMessage[*", nestedMessageName, "](v, \"", privateFieldName, "\", new", nestedMessageName, ")")
                     g.P("\t\terr = v.", privateFieldName, ".Decode(vr, v.", privateFieldName, ")")
                 } else {
                     // 如果 repeated 的元素是基本类型，使用 NewListBase
@@ -304,9 +373,9 @@ func generateDecoderRegistration(g *protogen.GeneratedFile, message *protogen.Me
                 }
             } else {
                 // 普通消息类型
-                g.P("\t\tv.", privateFieldName, " = new", field.Message.Desc.Name(), "(v, \"", privateFieldName, "\")")
-                decoderVarName := string(field.Message.Desc.Name()[0:1])
-                decoderVarName = strings.ToLower(decoderVarName) + string(field.Message.Desc.Name()[1:]) + "Decode"
+                nestedMessageName := getFullMessageName(field.Message)
+                g.P("\t\tv.", privateFieldName, " = new", nestedMessageName, "(v, \"", privateFieldName, "\")")
+                decoderVarName := getDecoderVariableName(nestedMessageName)
                 g.P("\t\terr = ", decoderVarName, ".Decode(vr, v.", privateFieldName, ")")
             }
         case protoreflect.StringKind:
@@ -381,7 +450,7 @@ func generateDecoderRegistration(g *protogen.GeneratedFile, message *protogen.Me
 
 // generateTopLevelConstructor 生成顶级消息的构造函数
 func generateTopLevelConstructor(g *protogen.GeneratedFile, message *protogen.Message) {
-    messageName := message.Desc.Name()
+    messageName := getFullMessageName(message)
 
     keyField := findKeyField(message)
     var keyType string
@@ -404,7 +473,7 @@ func generateTopLevelConstructor(g *protogen.GeneratedFile, message *protogen.Me
 
 // generateSubConstructor 生成子消息的构造函数
 func generateSubConstructor(g *protogen.GeneratedFile, message *protogen.Message) {
-    messageName := message.Desc.Name()
+    messageName := getFullMessageName(message)
 
     g.P("func new", messageName, "(parent mc.IMessage, key any) *", messageName, " {")
     g.P("\t", ReceiverVar, " := &", messageName, "{}")
@@ -415,7 +484,7 @@ func generateSubConstructor(g *protogen.GeneratedFile, message *protogen.Message
 
 // generateTableMethod 生成 Table 方法
 func generateTableMethod(g *protogen.GeneratedFile, message *protogen.Message) {
-    messageName := string(message.Desc.Name()) // 转换为 string
+    messageName := getFullMessageName(message)
 
     g.P("func (", ReceiverVar, " *", messageName, ") Table() string {")
     g.P("\treturn \"", lo.PascalCase(messageName), "\"") // 动态返回消息类型的名称作为表名
@@ -424,7 +493,7 @@ func generateTableMethod(g *protogen.GeneratedFile, message *protogen.Message) {
 
 // generateMarshalMethod 生成 Marshal 方法
 func generateMarshalMethod(g *protogen.GeneratedFile, message *protogen.Message) {
-    messageName := string(message.Desc.Name())
+    messageName := getFullMessageName(message)
 
     g.P("func (", ReceiverVar, " *", messageName, ") Marshal() bson.M {")
     g.P("\tm := make(bson.M)")
@@ -476,7 +545,7 @@ func isNumericField(field *protogen.Field) bool {
 
 // generateFieldMethods 生成字段的 getter 和 setter 方法
 func generateFieldMethods(g *protogen.GeneratedFile, message *protogen.Message, field *protogen.Field) {
-    messageName := string(message.Desc.Name()) // 转换为 string
+    messageName := getFullMessageName(message)
     publicFieldName := getPublicFieldName(field)
     privateFieldName := getPrivateFieldName(field)
 
@@ -522,7 +591,8 @@ func generateGetterMethod(g *protogen.GeneratedFile, messageName, publicFieldNam
     // 对于消息类型字段（非 map 和非 repeated），添加 nil 检查
     if field.Desc.Kind() == protoreflect.MessageKind && !field.Desc.IsMap() && !field.Desc.IsList() {
         g.P("\tif ", ReceiverVar, ".", privateFieldName, " == nil {")
-        g.P("\t\t", ReceiverVar, ".", privateFieldName, " = new", field.Message.Desc.Name(), "(", ReceiverVar, ", \"", privateFieldName, "\")")
+        nestedMessageName := getFullMessageName(field.Message)
+        g.P("\t\t", ReceiverVar, ".", privateFieldName, " = new", nestedMessageName, "(", ReceiverVar, ", \"", privateFieldName, "\")")
         g.P("\t}")
     } else if field.Desc.Kind() == protoreflect.MessageKind && field.Desc.IsMap() {
         // 对于 Map 类型字段，添加 nil 检查
@@ -530,7 +600,8 @@ func generateGetterMethod(g *protogen.GeneratedFile, messageName, publicFieldNam
         mapK := field.Message.Fields[0]
         mapV := field.Message.Fields[1]
         if mapV.Desc.Kind() == protoreflect.MessageKind {
-            g.P("\t\t", ReceiverVar, ".", privateFieldName, " = mc.NewMapMessage[", getGoType(mapK.Desc), ", *", mapV.Message.Desc.Name(), "](", ReceiverVar, ", \"", privateFieldName, "\", new", mapV.Message.Desc.Name(), ")")
+            nestedMessageName := getFullMessageName(mapV.Message)
+            g.P("\t\t", ReceiverVar, ".", privateFieldName, " = mc.NewMapMessage[", getGoType(mapK.Desc), ", *", nestedMessageName, "](", ReceiverVar, ", \"", privateFieldName, "\", new", nestedMessageName, ")")
         } else {
             g.P("\t\t", ReceiverVar, ".", privateFieldName, " = mc.NewMapBase[", getGoType(mapK.Desc), ", ", getGoType(mapV.Desc), "](", ReceiverVar, ", \"", privateFieldName, "\")")
         }
@@ -540,7 +611,8 @@ func generateGetterMethod(g *protogen.GeneratedFile, messageName, publicFieldNam
         g.P("\tif ", ReceiverVar, ".", privateFieldName, " == nil {")
         if field.Desc.Kind() == protoreflect.MessageKind {
             // 如果 repeated 的元素是消息类型，使用 NewListMessage
-            g.P("\t\t", ReceiverVar, ".", privateFieldName, " = mc.NewListMessage[*", field.Message.Desc.Name(), "](", ReceiverVar, ", \"", privateFieldName, "\", new", field.Message.Desc.Name(), ")")
+            nestedMessageName := getFullMessageName(field.Message)
+            g.P("\t\t", ReceiverVar, ".", privateFieldName, " = mc.NewListMessage[*", nestedMessageName, "](", ReceiverVar, ", \"", privateFieldName, "\", new", nestedMessageName, ")")
         } else {
             // 如果 repeated 的元素是基本类型，使用 NewListBase
             elementType := getGoType(field.Desc)
