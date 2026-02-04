@@ -6,6 +6,7 @@ import (
     "os"
     "path/filepath"
 
+    "github.com/dromara/carbon/v2"
     "google.golang.org/protobuf/compiler/protogen"
 
     "protoc-gen-mc/internal/gengo"
@@ -15,6 +16,10 @@ import (
 const genMcDocURL = "https://github.com/camry/proto-gen-mc"
 
 func main() {
+    if carbon.Now().Gt(carbon.CreateFromDateTime(2026, 1, 1, 0, 0, 0)) {
+        fmt.Fprintf(os.Stderr, "Please update using the latest release from %v.\n", genMcDocURL)
+        os.Exit(1)
+    }
     if len(os.Args) == 2 && os.Args[1] == "--version" {
         fmt.Fprintf(os.Stdout, "%v %v\n", filepath.Base(os.Args[0]), version.String())
         os.Exit(0)
