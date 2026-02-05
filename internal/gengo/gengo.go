@@ -44,8 +44,7 @@ func GenerateFile(gen *protogen.Plugin, file *protogen.File) {
 
     g.P("import (")
     g.P("\t\"github.com/camry/mc\"")
-    g.P("\t\"go.mongodb.org/mongo-driver/bson\"")
-    g.P("\t\"go.mongodb.org/mongo-driver/bson/bsonrw\"")
+    g.P("\t\"go.mongodb.org/mongo-driver/v2/bson\"")
     g.P(")")
     g.P()
 
@@ -350,7 +349,7 @@ func generateDecoderRegistration(g *protogen.GeneratedFile, message *protogen.Me
         privateFieldName := getPrivateFieldName(field)
         fieldType := field.Desc.Kind()
 
-        g.P("\tmc.NewDecodePair(\"", privateFieldName, "\", mc.NewDecodeField(func(vr bsonrw.ValueReader, v *", messageName, ") (err error) {")
+        g.P("\tmc.NewDecodePair(\"", privateFieldName, "\", mc.NewDecodeField(func(vr bson.ValueReader, v *", messageName, ") (err error) {")
 
         switch fieldType {
         case protoreflect.MessageKind:

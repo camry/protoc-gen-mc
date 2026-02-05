@@ -5,10 +5,10 @@ import (
 )
 
 const (
-    Major      = 1
+    Major      = 2
     Minor      = 0
-    Patch      = 2
-    PreRelease = "devel"
+    Patch      = 0
+    PreRelease = ""
 )
 
 // String 以 semver 格式化此模块的版本字符串。
