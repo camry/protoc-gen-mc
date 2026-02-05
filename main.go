@@ -16,7 +16,7 @@ import (
 const genMcDocURL = "https://github.com/camry/proto-gen-mc"
 
 func main() {
-    if carbon.Now().Gt(carbon.CreateFromDateTime(2026, 1, 1, 0, 0, 0)) {
+    if carbon.Now().Gt(carbon.CreateFromDateTime(2027, 1, 1, 0, 0, 0)) {
         fmt.Fprintf(os.Stderr, "Please update using the latest release from %v.\n", genMcDocURL)
         os.Exit(1)
     }
