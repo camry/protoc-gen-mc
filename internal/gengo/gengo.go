@@ -43,7 +43,7 @@ func GenerateFile(gen *protogen.Plugin, file *protogen.File) {
     g.P()
 
     g.P("import (")
-    g.P("\t\"github.com/camry/mc\"")
+    g.P("\t\"gitea.meigushi.go/meigushi/mc\"")
     g.P("\t\"go.mongodb.org/mongo-driver/v2/bson\"")
     g.P(")")
     g.P()
