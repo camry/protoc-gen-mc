@@ -640,6 +640,8 @@ func generateNumericMethods(g *protogen.GeneratedFile, messageName, publicFieldN
     g.P("\treturn ", ReceiverVar, ".", privateFieldName)
     g.P("}")
 
+    g.P()
+
     // 生成 Decr 方法
     g.P("func (", ReceiverVar, " *", messageName, ") Decr", publicFieldName, "(value ", fieldType, ") ", fieldType, " {")
     g.P("\t", ReceiverVar, ".", privateFieldName, " -= value")
