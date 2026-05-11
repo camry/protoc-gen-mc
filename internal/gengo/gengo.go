@@ -124,6 +124,9 @@ func generateMessageStruct(g *protogen.GeneratedFile, message *protogen.Message)
     // 生成 Marshal 方法
     generateMarshalMethod(g, message)
     g.P()
+    // 生成 Unmarshal 方法
+    generateUnmarshalMethod(g, message)
+    g.P()
 
     // 生成所有字段的 getter 和 setter 方法
     for _, field := range message.Fields {
@@ -526,6 +529,22 @@ func generateMarshalMethod(g *protogen.GeneratedFile, message *protogen.Message)
         }
     }
     g.P("\treturn m")
+    g.P("}")
+}
+
+// generateUnmarshalMethod 生成 Unmarshal 方法
+func generateUnmarshalMethod(g *protogen.GeneratedFile, message *protogen.Message) {
+    messageName := getFullMessageName(message)
+    g.P("func (", ReceiverVar, " *", messageName, ") Unmarshal(m bson.M) error {")
+    g.P("\tdecode, err := mc.GetDecode(", ReceiverVar, ")")
+    g.P("\tif err != nil {")
+    g.P("\t\treturn err")
+    g.P("\t}")
+    g.P("\tvr, err := mc.MToValueReader(m)")
+    g.P("\tif err != nil {")
+    g.P("\t\treturn err")
+    g.P("\t}")
+    g.P("\treturn decode.Decode(vr, \", ReceiverVar, \")")
     g.P("}")
 }
 
