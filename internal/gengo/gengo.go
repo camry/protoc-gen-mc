@@ -544,7 +544,7 @@ func generateUnmarshalMethod(g *protogen.GeneratedFile, message *protogen.Messag
     g.P("\tif err != nil {")
     g.P("\t\treturn err")
     g.P("\t}")
-    g.P("\treturn decode.Decode(vr, \", ReceiverVar, \")")
+    g.P("\treturn decode.Decode(vr, ", ReceiverVar, ")")
     g.P("}")
 }
 
