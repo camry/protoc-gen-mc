@@ -514,8 +514,8 @@ func generateMarshalMethod(g *protogen.GeneratedFile, message *protogen.Message)
         publicFieldName := getPublicFieldName(field)
 
         if field.Desc.Name() == "_id" && isTopLevelMessage(message) {
-            // 对于顶级消息的 _id 字段，使用 Key() 方法
-            g.P("\tm[\"", privateFieldName, "\"] = ", ReceiverVar, ".Key()")
+            // 对于顶级消息的 _id 字段，使用 _id 直接获取值
+            g.P("\tm[\"", privateFieldName, "\"] = ", ReceiverVar, "._id")
         } else {
             // 根据字段类型决定如何序列化
             // repeated、map 和 message 类型都需要调用 Marshal 方法
