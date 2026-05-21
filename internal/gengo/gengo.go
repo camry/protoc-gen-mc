@@ -128,7 +128,7 @@ func generateMessageStruct(g *protogen.GeneratedFile, message *protogen.Message)
     generateUnmarshalMethod(g, message)
     g.P()
 
-    // 生成所有字段的 getter 和 setter 方法
+    // 生成所有字段的 Get 和 Set 方法
     for _, field := range message.Fields {
         generateFieldMethods(g, message, field)
     }
@@ -169,7 +169,7 @@ func getPublicFieldName(field *protogen.Field) string {
     name := string(field.Desc.Name())
     // 特殊处理 _id 字段，将其转换为 Id
     if name == "_id" {
-        return "Id"
+        return "XId"
     }
     return lo.PascalCase(name)
 }
@@ -514,8 +514,8 @@ func generateMarshalMethod(g *protogen.GeneratedFile, message *protogen.Message)
         publicFieldName := getPublicFieldName(field)
 
         if field.Desc.Name() == "_id" && isTopLevelMessage(message) {
-            // 对于顶级消息的 _id 字段，使用 _id 直接获取值
-            g.P("\tm[\"", privateFieldName, "\"] = ", ReceiverVar, "._id")
+            // 对于顶级消息的 _id 字段，使用 XId 方法获取值
+            g.P("\tm[\"", privateFieldName, "\"] = ", ReceiverVar, ".GetXId()")
         } else {
             // 根据字段类型决定如何序列化
             // repeated、map 和 message 类型都需要调用 Marshal 方法
@@ -548,23 +548,24 @@ func generateUnmarshalMethod(g *protogen.GeneratedFile, message *protogen.Messag
     g.P("}")
 }
 
-// generateFieldMethods 生成字段的 getter 和 setter 方法
+// generateFieldMethods 生成字段的 Get 和 Set 方法
 func generateFieldMethods(g *protogen.GeneratedFile, message *protogen.Message, field *protogen.Field) {
     messageName := getFullMessageName(message)
     publicFieldName := getPublicFieldName(field)
     privateFieldName := getPrivateFieldName(field)
 
-    // 跳过为 _id 字段生成 getter 和 setter 方法
-    if string(field.Desc.Name()) != "_id" {
-        // 对于 repeated、map 和 message 字段，只生成 Getter 方法
-        if field.Desc.IsList() || field.Desc.IsMap() || field.Desc.Kind() == protoreflect.MessageKind {
-            // 为 repeated、map 和 message 字段只生成 Getter 方法
-            g.P() // 添加空行
-            generateGetterMethod(g, messageName, publicFieldName, privateFieldName, field)
-        } else {
-            // 为其他字段生成 Getter 和 Set 方法
-            g.P() // 添加空行
-            generateGetterMethod(g, messageName, publicFieldName, privateFieldName, field)
+    // 对于 repeated、map 和 message 字段，只生成 Get 方法
+    if field.Desc.IsList() || field.Desc.IsMap() || field.Desc.Kind() == protoreflect.MessageKind {
+        // 为 repeated、map 和 message 字段只生成 Get 方法
+        g.P() // 添加空行
+        generateGetMethod(g, messageName, publicFieldName, privateFieldName, field)
+    } else {
+        // 为其他字段生成 Get 和 Set 方法
+        g.P() // 添加空行
+        generateGetMethod(g, messageName, publicFieldName, privateFieldName, field)
+
+        // 跳过为 _id 字段生成 Set 方法和数值类型字段的 Incr 和 Decr 方法
+        if string(field.Desc.Name()) != "_id" {
             g.P() // 添加空行
             generateSetMethod(g, messageName, publicFieldName, privateFieldName, field)
 
@@ -587,8 +588,8 @@ func generateFieldMethods(g *protogen.GeneratedFile, message *protogen.Message, 
     }
 }
 
-// generateGetterMethod 生成 Getter 方法
-func generateGetterMethod(g *protogen.GeneratedFile, messageName, publicFieldName, privateFieldName string, field *protogen.Field) {
+// generateGetMethod 生成 Get 方法
+func generateGetMethod(g *protogen.GeneratedFile, messageName, publicFieldName, privateFieldName string, field *protogen.Field) {
     returnType := getFieldType(field)
 
     g.P("func (", ReceiverVar, " *", messageName, ") Get", publicFieldName, "() ", returnType, " {")
