@@ -70,7 +70,12 @@ func generateEnum(g *protogen.GeneratedFile, enum *protogen.Enum) {
     // 生成枚举值常量
     g.P("const (")
     for _, value := range enum.Values {
-        g.P(enumName, "_", value.Desc.Name(), " ", enumName, " = ", value.Desc.Number())
+        trailingComments := value.Comments.Trailing
+        if trailingComments != "" {
+            g.P(enumName, "_", value.Desc.Name(), " ", enumName, " = ", value.Desc.Number(), trailingComment(trailingComments))
+        } else {
+            g.P(enumName, "_", value.Desc.Name(), " ", enumName, " = ", value.Desc.Number())
+        }
     }
     g.P(")")
     g.P()
