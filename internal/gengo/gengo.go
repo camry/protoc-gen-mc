@@ -48,10 +48,32 @@ func GenerateFile(gen *protogen.Plugin, file *protogen.File) {
     g.P(")")
     g.P()
 
+    // 生成所有枚举类型的代码
+    for _, enum := range file.Enums {
+        generateEnum(g, enum)
+    }
+
     // 生成所有消息类型的代码（包括嵌套消息）
     for _, message := range file.Messages {
         generateMessageStructRecursive(g, message)
     }
+}
+
+// generateEnum 生成枚举类型的代码
+func generateEnum(g *protogen.GeneratedFile, enum *protogen.Enum) {
+    enumName := enum.Desc.Name()
+
+    // 生成枚举类型定义
+    g.P("type ", enumName, " int32")
+    g.P()
+
+    // 生成枚举值常量
+    g.P("const (")
+    for _, value := range enum.Values {
+        g.P(enumName, "_", value.Desc.Name(), " ", enumName, " = ", value.Desc.Number())
+    }
+    g.P(")")
+    g.P()
 }
 
 // generateMessageStructRecursive 递归生成消息结构体及其相关方法
@@ -235,9 +257,41 @@ func getFullMessageNameFilterPackage(fullName string, packageName string) string
     return strings.Replace(msgName, ".", "_", -1)
 }
 
+// getEnumTypeName 获取枚举字段的类型名称
+func getEnumTypeName(field *protogen.Field) string {
+    enumDesc := field.Desc.Enum()
+    fullName := string(enumDesc.FullName())
+    packageName := string(field.Desc.ParentFile().Package())
+    return getEnumTypeNameFilterPackage(fullName, packageName)
+}
+
+// getEnumTypeNameByDesc 通过字段描述符获取枚举类型名称
+func getEnumTypeNameByDesc(desc protoreflect.FieldDescriptor) string {
+    enumDesc := desc.Enum()
+    fullName := string(enumDesc.FullName())
+    packageName := string(desc.ParentFile().Package())
+    return getEnumTypeNameFilterPackage(fullName, packageName)
+}
+
+// getEnumTypeNameFilterPackage 获取枚举类型名称，过滤掉包名
+func getEnumTypeNameFilterPackage(fullName string, packageName string) string {
+    if packageName != "" && strings.HasPrefix(fullName, packageName+".") {
+        return strings.Replace(fullName, packageName+".", "", 1)
+    }
+    return fullName
+}
+
 // getFieldType 获取字段的 Go 类型
 func getFieldType(field *protogen.Field) string {
     switch field.Desc.Kind() {
+    case protoreflect.EnumKind:
+        // 处理枚举类型
+        if field.Desc.IsList() {
+            // repeated 枚举类型
+            enumName := getEnumTypeName(field)
+            return fmt.Sprintf("*mc.ListBase[%s]", enumName)
+        }
+        return getEnumTypeName(field)
     case protoreflect.MessageKind:
         if field.Desc.IsMap() {
             // 处理 map 类型
@@ -316,7 +370,7 @@ func getGoType(desc protoreflect.FieldDescriptor) string {
     case protoreflect.BoolKind:
         return "bool"
     case protoreflect.EnumKind:
-        return "int32"
+        return getEnumTypeNameByDesc(desc)
     case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Sfixed32Kind:
         return "int32"
     case protoreflect.Uint32Kind, protoreflect.Fixed32Kind:
@@ -444,6 +498,14 @@ func generateDecoderRegistration(g *protogen.GeneratedFile, message *protogen.Me
                 g.P("\t\terr = v.", privateFieldName, ".Decode(vr, v.", privateFieldName, ")")
             } else {
                 g.P("\t\tv.", privateFieldName, ", err = mc.Float64Decode(vr)")
+            }
+        case protoreflect.EnumKind:
+            enumTypeName := getEnumTypeName(field)
+            if field.Desc.IsList() {
+                g.P("\t\tv.", privateFieldName, " = mc.NewListBase[", enumTypeName, "](v, \"", privateFieldName, "\")")
+                g.P("\t\terr = v.", privateFieldName, ".Decode(vr, v.", privateFieldName, ")")
+            } else {
+                g.P("\t\tv.", privateFieldName, ", err = mc.EnumDecode[", enumTypeName, "](vr)")
             }
         case protoreflect.BytesKind:
             g.P("\t\tv.", privateFieldName, ", err = mc.BinaryDecode(vr)")
