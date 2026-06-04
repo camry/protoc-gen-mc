@@ -9,8 +9,8 @@ import (
     "github.com/dromara/carbon/v2"
     "google.golang.org/protobuf/compiler/protogen"
 
-    "protoc-gen-mc/internal/gengo"
-    "protoc-gen-mc/internal/version"
+    "gitea.meigushi.go/meigushi/protoc-gen-mc/internal/gengo"
+    "gitea.meigushi.go/meigushi/protoc-gen-mc/internal/version"
 )
 
 const genMcDocURL = "https://github.com/camry/proto-gen-mc"

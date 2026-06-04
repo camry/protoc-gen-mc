@@ -8,7 +8,7 @@ import (
     "google.golang.org/protobuf/compiler/protogen"
     "google.golang.org/protobuf/reflect/protoreflect"
 
-    "protoc-gen-mc/internal/version"
+    "gitea.meigushi.go/meigushi/protoc-gen-mc/internal/version"
 )
 
 const (
