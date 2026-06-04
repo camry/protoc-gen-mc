@@ -1,4 +1,4 @@
-module gitea.meigushi.go/meigushi/protoc-gen-mc
+module gitea.meigushi.go/meigushi/protoc-gen-mc/v2
 
 go 1.25.4
 
